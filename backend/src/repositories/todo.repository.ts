@@ -1,5 +1,11 @@
-import { query } from '../db/index.js';
+import { query as defaultQuery } from '../db/index.js';
 import { Todo, CreateTodoDto, UpdateTodoDto } from '../types/todo.js';
+import { QueryResult, QueryResultRow } from 'pg';
+
+export type QueryFn = <T extends QueryResultRow = QueryResultRow>(
+  text: string,
+  params?: unknown[]
+) => Promise<QueryResult<T>>;
 
 export interface ITodoRepository {
   findAll(): Promise<Todo[]>;
@@ -10,15 +16,17 @@ export interface ITodoRepository {
 }
 
 export class TodoRepository implements ITodoRepository {
+  constructor(private readonly queryFn: QueryFn = defaultQuery) {}
+
   async findAll(): Promise<Todo[]> {
-    const res = await query<Todo>(
+    const res = await this.queryFn<Todo>(
       'SELECT id, title, completed, created_at, updated_at FROM todos ORDER BY created_at ASC'
     );
     return res.rows;
   }
 
   async findById(id: string): Promise<Todo | null> {
-    const res = await query<Todo>(
+    const res = await this.queryFn<Todo>(
       'SELECT id, title, completed, created_at, updated_at FROM todos WHERE id = $1',
       [id]
     );
@@ -26,7 +34,7 @@ export class TodoRepository implements ITodoRepository {
   }
 
   async create(dto: CreateTodoDto): Promise<Todo> {
-    const res = await query<Todo>(
+    const res = await this.queryFn<Todo>(
       'INSERT INTO todos (title) VALUES ($1) RETURNING id, title, completed, created_at, updated_at',
       [dto.title]
     );
@@ -56,12 +64,12 @@ export class TodoRepository implements ITodoRepository {
     values.push(id);
 
     const queryText = `UPDATE todos SET ${fields.join(', ')} WHERE id = $${idx} RETURNING id, title, completed, created_at, updated_at`;
-    const res = await query<Todo>(queryText, values);
+    const res = await this.queryFn<Todo>(queryText, values);
     return res.rows[0] || null;
   }
 
   async delete(id: string): Promise<boolean> {
-    const res = await query(
+    const res = await this.queryFn(
       'DELETE FROM todos WHERE id = $1 RETURNING id',
       [id]
     );
