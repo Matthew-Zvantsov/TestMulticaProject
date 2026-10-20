@@ -1,0 +1,15 @@
+{
+	"name": "test-multica-project",
+	"version": "1.0.0",
+	"private": true,
+	"description": "Todo list web application",
+	"workspaces": [
+		"backend"
+	],
+	"scripts": {
+		"test": "npm run test --prefix backend",
+		"build": "npm run build --prefix backend",
+		"typecheck": "npm run typecheck --prefix backend",
+		"lint": "npm run lint --prefix backend"
+	}
+}
